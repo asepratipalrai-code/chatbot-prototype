@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Legal Services Assistant</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="app-shell">
+      <div class="chat-container">
+        <header class="chat-header">
+          <div class="header-left">
+            <div class="bot-avatar" aria-label="Sikkim State Legal Services Authority avatar">
+              <img src="Resources/SLSA Logo.png" alt="Sikkim State Legal Services Authority logo" />
+            </div>
+            <div class="header-text">
+              <div class="bot-name">Sikkim State Legal Services Authority</div>
+              <div class="bot-status">Online</div>
+            </div>
+          </div>
+          <div class="header-right" aria-label="Chat actions">
+            <button type="button" class="icon-btn" id="clear-chat-btn" title="Clear chat">
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+          </div>
+        </header>
+
+        <main class="chat-box" id="chat-box" aria-live="polite"></main>
+
+        <div class="composer" aria-label="Message composer">
+          <button type="button" class="composer-icon" aria-label="Add action" title="Quick actions">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+          <input
+            type="text"
+            id="user-input"
+            placeholder="Type your question..."
+            autocomplete="off"
+            aria-label="Type your message"
+          />
+          <button type="button" id="send-btn" class="send-btn" aria-label="Send message">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
