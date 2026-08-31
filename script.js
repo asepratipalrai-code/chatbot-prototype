@@ -264,7 +264,6 @@ function handleAction(id) {
 
 function buildBotReply(inputText) {
   const normalized = inputText.toLowerCase().trim();
-  const recentTopics = conversationMemory.slice(-10).map((entry) => entry.text.toLowerCase()).join(' ');
 
   if (/^(hi|hello|hey|namaste|good morning|good evening|greetings)/.test(normalized)) {
     return {
@@ -273,7 +272,9 @@ function buildBotReply(inputText) {
     };
   }
 
-  if (/(apply|application|legal aid)/i.test(normalized) || /legal aid/i.test(recentTopics)) {
+  const hasExplicitLegalAidIntent = /(apply|application|legal aid)/i.test(normalized);
+
+  if (hasExplicitLegalAidIntent) {
     return {
       text: `To apply for legal aid, eligible persons may submit an application through the official portal. Please use the link below to begin the application process.\n\nPortal: ${getPortalLinkMarkup('https://scourtapp.nic.in/lsams/nologin/applicationFiling.action?requestLocale=en', 'NALSA : Legal Service Management System')}`,
       actions: [
