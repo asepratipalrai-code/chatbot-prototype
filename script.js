@@ -2,12 +2,16 @@ const chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const clearChatBtn = document.getElementById('clear-chat-btn');
+const faqModal = document.getElementById('faq-modal');
+const faqList = document.getElementById('faq-list');
+const closeFaqBtn = document.getElementById('close-faq-btn');
 
 const MEMORY_KEY = 'legal-services-chat-memory';
 let conversationMemory = loadMemory();
 let faqs = [];
 let botIsTyping = false;
 let lastActionStamp = 0;
+let responseTimer = null;
 
 const FAQ_DATA = [
   { sl_no: 1, question: 'What is Legal Services?', answer: 'Legal Service means giving of any service in the conduct of any case or other legal proceeding before any Court or other Authority or Tribunal. It also includes the giving of advice on any legal matter.' },
@@ -36,7 +40,7 @@ const FAQ_DATA = [
 const DEFAULT_ACTIONS = [
   { id: 'apply_legal_aid', label: 'Apply for Legal Aid' },
   { id: 'track_legal_aid', label: 'Track Legal Aid' },
-  { id: 'faq_legal_aid', label: 'FAQ on Legal Aid' }
+  { id: 'faq_legal_aid', label: 'View FAQs' }
 ];
 
 userInput.addEventListener('keydown', (event) => {
@@ -54,6 +58,19 @@ userInput.addEventListener('input', () => {
 
 sendBtn.addEventListener('click', sendMessage);
 clearChatBtn.addEventListener('click', resetChat);
+closeFaqBtn.addEventListener('click', closeFaqModal);
+faqModal.addEventListener('click', (event) => {
+  if (event.target === faqModal) {
+    closeFaqModal();
+    return;
+  }
+
+  const faqButton = event.target.closest('.faq-option');
+  if (faqButton) submitFaqQuestion(faqButton.dataset.faqIndex);
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !faqModal.hidden) closeFaqModal();
+});
 chatBox.addEventListener('click', (event) => {
   const actionBtn = event.target.closest('.quick-action');
   if (!actionBtn) return;
@@ -62,8 +79,18 @@ chatBox.addEventListener('click', (event) => {
   if (!action) return;
 
   const now = Date.now();
-  if (now - lastActionStamp < 400) return;
+  if (now - lastActionStamp < 400 || botIsTyping) return;
   lastActionStamp = now;
+
+  if (action.startsWith('faq_') && action !== 'faq_legal_aid') {
+    submitFaqQuestionById(action);
+    return;
+  }
+
+  if (action === 'faq_legal_aid') {
+    openFaqModal();
+    return;
+  }
 
   const actionText = actionBtn.textContent.trim();
   appendUserMessage(actionText);
@@ -104,6 +131,10 @@ async function loadFaqs() {
 }
 
 function resetChat() {
+  if (responseTimer) clearTimeout(responseTimer);
+  responseTimer = null;
+  removeTypingIndicator();
+  closeFaqModal();
   conversationMemory = [];
   saveMemory();
   chatBox.innerHTML = '';
@@ -125,7 +156,8 @@ function sendMessage() {
   const reply = buildBotReply(text);
   showTypingIndicator();
 
-  setTimeout(() => {
+  responseTimer = setTimeout(() => {
+    responseTimer = null;
     removeTypingIndicator();
     appendBotMessage(reply.text, reply.actions || [], { allowHtml: Boolean(reply.allowHtml) });
     addToMemory('bot', reply.text);
@@ -193,17 +225,58 @@ function renderDateSeparator(label) {
 }
 
 function renderFaqList() {
-  if (!faqs.length) {
-    appendBotMessage('The legal FAQ list is temporarily unavailable. Please try again in a moment.', []);
-    return;
-  }
+  openFaqModal();
+}
 
-  const faqActions = faqs.map((faq) => ({
-    id: `faq_${slugify(faq.question)}`,
-    label: faq.question
-  }));
+function openFaqModal() {
+  if (botIsTyping || !faqs.length) return;
 
-  appendBotMessage('Here are the common legal aid questions. Please select one to view the answer.', faqActions);
+  faqList.innerHTML = faqs.map((faq, index) => `
+    <button type="button" class="faq-option" data-faq-index="${index}" role="listitem">
+      ${escapeHtml(faq.question || 'Untitled legal services question')}
+    </button>
+  `).join('');
+  faqModal.hidden = false;
+  closeFaqBtn.focus();
+}
+
+function closeFaqModal() {
+  faqModal.hidden = true;
+  focusInput();
+}
+
+function submitFaqQuestionById(actionId) {
+  const faqKey = actionId.replace(/^faq_/, '');
+  const faqIndex = faqs.findIndex((faq) => slugify(faq.question) === faqKey);
+  submitFaqQuestion(faqIndex);
+}
+
+function submitFaqQuestion(faqIndex) {
+  const selectedFaq = faqs[Number(faqIndex)];
+  if (!selectedFaq || botIsTyping) return;
+
+  const question = String(selectedFaq.question || '').trim();
+  if (!question) return;
+  const answer = String(selectedFaq.answer || '').trim() || 'This FAQ does not have an answer available yet. Please contact the nearest legal services office for assistance.';
+  closeFaqModal();
+  appendUserMessage(question);
+  addToMemory('user', question);
+  showTypingIndicator();
+  responseTimer = setTimeout(() => {
+    responseTimer = null;
+    removeTypingIndicator();
+    appendBotMessage(`${question}\n\n${answer}`, getFaqActions());
+    addToMemory('bot', answer);
+    focusInput();
+  }, 450);
+}
+
+function getFaqActions() {
+  return [
+    { id: 'faq_legal_aid', label: 'View FAQs' },
+    { id: 'apply_legal_aid', label: 'Apply for Legal Aid' },
+    { id: 'track_legal_aid', label: 'Track Legal Aid' }
+  ];
 }
 
 function getPortalLinkMarkup(url, label) {
@@ -299,19 +372,16 @@ function buildBotReply(inputText) {
   if (/^(faq|frequently asked questions?|legal faq|faq on legal aid)$/i.test(normalized) || /\bfrequently asked questions?\b/i.test(normalized)) {
     return {
       text: 'Here are the common legal-aid questions currently available.',
-      actions: faqs.map((faq) => ({ id: `faq_${slugify(faq.question)}`, label: faq.question }))
+      actions: [{ id: 'faq_legal_aid', label: 'View FAQs' }]
     };
   }
 
   const match = findFaqMatch(normalized);
   if (match) {
+    const answer = String(match.answer || '').trim() || 'This FAQ does not have an answer available yet. Please contact the nearest legal services office for assistance.';
     return {
-      text: `${match.question}\n\n${match.answer}`,
-      actions: [
-        { id: 'faq_legal_aid', label: 'View more FAQs' },
-        { id: 'apply_legal_aid', label: 'Apply for Legal Aid' },
-        { id: 'track_legal_aid', label: 'Track Legal Aid' }
-      ]
+      text: `${match.question}\n\n${answer}`,
+      actions: getFaqActions()
     };
   }
 

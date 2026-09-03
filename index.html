@@ -13,6 +13,7 @@
   <body>
     <div class="app-shell">
       <div class="chat-container">
+        <div class="chat-wallpaper" aria-hidden="true"></div>
         <header class="chat-header">
           <div class="header-left">
             <div class="bot-avatar" aria-label="Sikkim State Legal Services Authority avatar">
@@ -33,9 +34,6 @@
         <main class="chat-box" id="chat-box" aria-live="polite"></main>
 
         <div class="composer" aria-label="Message composer">
-          <button type="button" class="composer-icon" aria-label="Add action" title="Quick actions">
-            <i class="fa-solid fa-plus"></i>
-          </button>
           <input
             type="text"
             id="user-input"
@@ -46,6 +44,21 @@
           <button type="button" id="send-btn" class="send-btn" aria-label="Send message">
             <i class="fa-solid fa-paper-plane"></i>
           </button>
+        </div>
+
+        <div class="modal-backdrop" id="faq-modal" hidden>
+          <section class="faq-modal" role="dialog" aria-modal="true" aria-labelledby="faq-modal-title">
+            <div class="faq-modal-header">
+              <div>
+                <h2 id="faq-modal-title">Frequently Asked Questions</h2>
+                <p>Select a question to add it to the conversation.</p>
+              </div>
+              <button type="button" class="modal-close" id="close-faq-btn" aria-label="Close FAQs" title="Close FAQs">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div class="faq-list" id="faq-list" role="list"></div>
+          </section>
         </div>
       </div>
     </div>
